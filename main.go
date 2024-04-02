@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -29,8 +32,29 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	dsn := "host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable TimeZone=Asia/Shanghai"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	conf := struct {
+		Host     string
+		Port     int
+		User     string
+		Password string
+		DBName   string
+	}{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     5432,
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		DBName:   os.Getenv("DB_NAME"),
+	}
+
+	dsn := url.URL{
+		User:     url.UserPassword(conf.User, conf.Password),
+		Scheme:   "postgres",
+		Host:     fmt.Sprintf("%s:%d", conf.Host, conf.Port),
+		Path:     conf.DBName,
+		RawQuery: (&url.Values{"sslmode": []string{"disable"}}).Encode(),
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
 	if err != nil {
 		log.Fatal("failed to connect to the database: ", err)
 	}
