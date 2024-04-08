@@ -31,4 +31,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ghcr.io/${{ env.LOWERCASE_OWNER }}/sample_app:latest
+        tags: ghcr.io/${{ env.LOWERCASE_ACTOR }}/sample_app:latest
