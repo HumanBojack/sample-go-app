@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -29,6 +31,31 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("%s %s %s", r.Method, r.RequestURI, time.Since(start))
 	})
+}
+
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			requestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(v)
+		}))
+
+		next.ServeHTTP(w, r)
+		timer.ObserveDuration()
+	})
+}
+
+var (
+	requestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "http_request_duration_seconds",
+			Help: "Duration of HTTP requests.",
+		},
+		[]string{"method", "path"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(requestDuration)
 }
 
 func main() {
@@ -69,11 +96,13 @@ func main() {
 	router.HandleFunc("GET /user", handler.GetUser)
 	router.HandleFunc("POST /user", handler.CreateUser)
 	router.HandleFunc("GET /users", handler.GetAllUsers)
+	router.Handle("GET /metrics", promhttp.Handler())
 
 	server := http.Server{
 		Addr:    ":8080",
-		Handler: loggingMiddleware(router),
+		Handler: prometheusMiddleware(loggingMiddleware(router)),
 	}
+	fmt.Println("Server is running on port 8080")
 	server.ListenAndServe()
 }
 
