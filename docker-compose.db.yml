@@ -22,6 +22,8 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     restart: unless-stopped
+    env_file:
+      - .env.db
     ports:
       - "9187:9187"
     depends_on:
