@@ -18,3 +18,11 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./promtail:/etc/promtail
     command: -config.file=/etc/promtail/promtail-config.yml
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    depends_on:
+      - db
