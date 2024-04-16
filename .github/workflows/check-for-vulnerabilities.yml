@@ -1,0 +1,23 @@
+name: Check for vulnerabilities
+
+on: 
+  schedule:
+   - cron: "0 0 * * 1-5"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Convert GitHub actor to lowercase
+        run: echo "LOWERCASE_ACTOR=$(echo ${{ github.actor }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+        with:
+          ref: main
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ env.LOWERCASE_ACTOR }}/sample_app:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
