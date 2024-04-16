@@ -16,3 +16,17 @@ sequenceDiagram
         Github->>+Ghcr: push image
     end
 ```
+
+### Trivy
+We run a daily check for vulnerabilities using trivy.
+```mermaid
+sequenceDiagram
+    cron->>+Github: Every week day
+    Github->>+Github: Checkout code (main branch)
+    Github->>+Github: Run Trivy vulnerability scanner
+    alt Vulnerabilities found
+        Note over Github: Exit with code 1
+    else No vulnerabilities found
+        Note over Github: Exit with code 0
+    end
+```
