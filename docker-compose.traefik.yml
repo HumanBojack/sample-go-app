@@ -1,0 +1,48 @@
+services:
+  proxy:
+    image: traefik:2.11
+    container_name: traefik
+    networks:
+      - traefik
+    ports:
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+    volumes:
+      - letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    command:
+      # Docker configuration
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik"
+      # Configure entrypoint
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # SSL configuration
+      - "--certificatesresolvers.letsencryptresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencryptresolver.acme.httpchallenge.entrypoint=web"
+      # TO test certificate
+      - "--certificatesresolvers.letsencryptresolver.acme.email=raphaelthi59@gmail.com"
+      - "--certificatesresolvers.letsencryptresolver.acme.storage=/letsencrypt/acme.json"
+      # Global HTTP -> HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # Enable debug logs
+      - "--log.level=DEBUG"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik2.pdm.musubi.dev`)"
+
+networks:
+  traefik:
+    external:
+      name: traefik
+    
+volumes:
+  letsencrypt:
+    external: true

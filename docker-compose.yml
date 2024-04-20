@@ -1,23 +1,73 @@
 services:
   app:
-    build: .
+    image: ghcr.io/humanbojack/sample_app:latest
     container_name: sample_app
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - DB_HOST=db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=postgres
+    env_file:
+      - .env.app
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sample-app.entrypoints=websecure"
+      - "traefik.http.routers.sample-app.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.sample-app.tls=true"
+      - "traefik.http.routers.sample-app.rule=Host(`app.pdm.musubi.dev`)"
+      - "traefik.http.services.sample-app.loadbalancer.server.port=8080"
+      - "traefik.docker.network=traefik"
     depends_on:
-      - db
-  
+      db:
+        condition: service_started
+
   db:
-    image: postgres:13
+    image: postgres:latest
     container_name: sample_db
     restart: unless-stopped
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
+    env_file:
+      - .env.db
+    networks:
+    - default
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    restart: unless-stopped
+    env_file:
+      - .env.db
+    ports:
+      - "9187:9187"
+    depends_on:
+      - db
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.hwmon'
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+    ports:
+      - "9100:9100"
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    restart: unless-stopped
+    ports:
+      - "9080:9080"
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  traefik:
+    name: traefik
+    external: true
