@@ -5,20 +5,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env.app
-    networks:
-      - traefik
-      - default
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.sample-app.entrypoints=websecure"
-      - "traefik.http.routers.sample-app.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.sample-app.tls=true"
-      - "traefik.http.routers.sample-app.rule=Host(`app.pdm.musubi.dev`)"
-      - "traefik.http.services.sample-app.loadbalancer.server.port=8080"
-      - "traefik.docker.network=traefik"
     depends_on:
       db:
         condition: service_started
+    ports:
+      - "8080:8080"
 
   db:
     image: postgres:latest
@@ -26,48 +17,3 @@ services:
     restart: unless-stopped
     env_file:
       - .env.db
-    networks:
-    - default
-
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter
-    restart: unless-stopped
-    env_file:
-      - .env.db
-    ports:
-      - "9187:9187"
-    depends_on:
-      - db
-
-  node-exporter:
-    image: quay.io/prometheus/node-exporter
-    container_name: node-exporter
-    command:
-      - '--path.rootfs=/host'
-      - '--collector.hwmon'
-    restart: unless-stopped
-    volumes:
-      - '/:/host:ro,rslave'
-    ports:
-      - "9100:9100"
-
-  promtail:
-    image: grafana/promtail:3.0.0
-    container_name: promtail
-    restart: unless-stopped
-    ports:
-      - "9080:9080"
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./promtail:/etc/promtail
-    command: -config.file=/etc/promtail/promtail-config.yml
-
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-networks:
-  traefik:
-    name: traefik
-    external: true
