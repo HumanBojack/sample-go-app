@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -152,9 +153,56 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/user?username="+username, http.StatusSeeOther)
 }
 
+type GetAllUsersResponse struct {
+	Users      []User `json:"users"`
+	Page       int    `json:"page"`
+	TotalPages int    `json:"totalPages"`
+	HasPrev    bool   `json:"hasPrev"`
+	PrevPage   int    `json:"prevPage"`
+	HasNext    bool   `json:"hasNext"`
+	NextPage   int    `json:"nextPage"`
+}
+
 func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	// Default values for pagination
+	const pageSize = 10
+	var defaultPage = 1
+
+	// Parse query parameters
+	pageStr := r.URL.Query().Get("page")
+
+	// Convert page to int
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = defaultPage
+	}
+
+	// Calculate offset
+	offset := (page - 1) * pageSize
+
+	// Count total number of users
+	var totalUsers int64
+	h.db.Model(&User{}).Count(&totalUsers)
+
+	// Calculate total pages
+	totalPages := int(totalUsers) / pageSize
+	if int(totalUsers)%pageSize != 0 {
+		totalPages++
+	}
+
 	var users []User
-	h.db.Find(&users)
+	// Apply pagination using Limit and Offset
+	h.db.Limit(pageSize).Offset(offset).Find(&users)
+
+	response := GetAllUsersResponse{
+		Users:      users,
+		Page:       page,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		PrevPage:   page - 1,
+		HasNext:    page < totalPages,
+		NextPage:   page + 1,
+	}
 
 	t, err := template.ParseFiles("templates/users.html")
 	if err != nil {
@@ -162,7 +210,7 @@ func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = t.Execute(w, users)
+	err = t.Execute(w, response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

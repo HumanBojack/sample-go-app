@@ -8,13 +8,23 @@
 <body>
   <h1>Welcome to the sample app</h1>
   <h2>Here are all the users:</h2>
-  {{ range . }}
+  {{ range .Users }}
     <h2>Found user:</h2>
     <p>ID: {{ .ID }}</p>
     <p>Email: {{ .Email }}</p>
     <p>Username: {{ .Username }}</p>
   {{ else }}
     <h2>No users found</h2>
+  {{ end }}
+
+  <hr/>
+  
+  <p>Page {{ .Page }} of {{ .TotalPages }}</p>
+  {{ if .HasPrev }}
+    <a href="/users?page={{ .PrevPage }}">Previous</a>
+  {{ end }}
+  {{ if .HasNext }}
+    <a href="/users?page={{ .NextPage }}">Next</a>
   {{ end }}
 </body>
 </html>
