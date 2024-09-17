@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/prometheus/client_golang v1.20.3
 	gorm.io/driver/postgres v1.5.9
-	gorm.io/gorm v1.25.11
+	gorm.io/gorm v1.25.12
 )
 
 require (
