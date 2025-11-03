@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/prometheus/client_golang v1.23.2
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.31.0
+	gorm.io/gorm v1.31.1
 )
 
 require (
